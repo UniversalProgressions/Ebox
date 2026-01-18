@@ -2,10 +2,9 @@
   "compilerOptions": {
     // Environment setup & latest features
     "lib": ["ESNext"],
-    "target": "ESNext",
-    "module": "Preserve",
+    "target": "esnext",
+    "module": "preserve",
     "moduleDetection": "force",
-    "jsx": "react-jsx",
     "allowJs": true,
 
     // Bundler mode
@@ -25,9 +24,8 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
-
-    "paths": {
-      "#civitai-api/*": ["./packages/civitai-api/*"]
-    }
-  }
+  },
+  "references": [
+    {"civitai-api": "./packages/civitai-api"}
+  ]
 }

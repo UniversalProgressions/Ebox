@@ -1,13 +1,17 @@
-import type { ClientConfig } from './config.js';
-import { CivitaiClient } from './client.js';
-import type { CreatorsEndpoint } from './endpoints/creators.js';
-import { CreatorsEndpointImpl } from './endpoints/creators.js';
-import type { ModelsEndpoint } from './endpoints/models.js';
-import { ModelsEndpointImpl } from './endpoints/models.js';
-import type { ModelVersionsEndpoint } from './endpoints/model-versions.js';
-import { ModelVersionsEndpointImpl } from './endpoints/model-versions.js';
-import type { TagsEndpoint } from './endpoints/tags.js';
-import { TagsEndpointImpl } from './endpoints/tags.js';
+import type { ClientConfig } from './config';
+import { CivitaiClient } from './client';
+import type { CreatorsEndpoint } from './endpoints/creators';
+import { CreatorsEndpointImpl } from './endpoints/creators';
+import type { ModelsEndpoint } from './endpoints/models';
+import { ModelsEndpointImpl } from './endpoints/models';
+import type { ModelVersionsEndpoint } from './endpoints/model-versions';
+import { ModelVersionsEndpointImpl } from './endpoints/model-versions';
+import type { TagsEndpoint } from './endpoints/tags';
+import { TagsEndpointImpl } from './endpoints/tags';
+import type { UnifiedModelVersionsEndpoint } from './endpoints/unified-model-versions';
+import { UnifiedModelVersionsEndpointImpl } from './endpoints/unified-model-versions';
+import type { UnifiedModelsEndpoint } from './endpoints/unified-models';
+import { UnifiedModelsEndpointImpl } from './endpoints/unified-models';
 
 /**
  * Civitai API Client main interface
@@ -35,6 +39,16 @@ export interface CivitaiApiClient {
   readonly modelVersions: ModelVersionsEndpoint;
   
   /**
+   * Unified model versions API (returns unified types)
+   */
+  readonly unifiedModelVersions: UnifiedModelVersionsEndpoint;
+  
+  /**
+   * Unified models API (returns unified types)
+   */
+  readonly unifiedModels: UnifiedModelsEndpoint;
+  
+  /**
    * Tags related API
    */
   readonly tags: TagsEndpoint;
@@ -58,6 +72,8 @@ export class CivitaiApiClientImpl implements CivitaiApiClient {
   readonly creators: CreatorsEndpoint;
   readonly models: ModelsEndpoint;
   readonly modelVersions: ModelVersionsEndpoint;
+  readonly unifiedModelVersions: UnifiedModelVersionsEndpoint;
+  readonly unifiedModels: UnifiedModelsEndpoint;
   readonly tags: TagsEndpoint;
 
   constructor(config: ClientConfig = {}) {
@@ -65,6 +81,8 @@ export class CivitaiApiClientImpl implements CivitaiApiClient {
     this.creators = new CreatorsEndpointImpl(this.client);
     this.models = new ModelsEndpointImpl(this.client);
     this.modelVersions = new ModelVersionsEndpointImpl(this.client);
+    this.unifiedModelVersions = new UnifiedModelVersionsEndpointImpl(this.client);
+    this.unifiedModels = new UnifiedModelsEndpointImpl(this.client);
     this.tags = new TagsEndpointImpl(this.client);
   }
 
@@ -90,30 +108,30 @@ export function createCivitaiClient(config: ClientConfig = {}): CivitaiApiClient
 export default createCivitaiClient;
 
 // Export all types
-export type { ClientConfig } from './config.js';
+export type { ClientConfig } from './config';
 export type {
   CivitaiError,
   NetworkError,
   ValidationError,
   BadRequestError,
-} from './errors.js';
+} from './errors';
 
 export type {
   CreatorsRequestOptions,
   CreatorsResponse,
-} from '../models/creators.js';
+} from '../models/creators';
 
 export type {
   ModelsRequestOptions,
   ModelsResponse,
   Model,
   ModelVersion as ModelVersionInList,
-} from '../models/models.js';
+} from '../models/models';
 
 export type {
   ModelById,
-} from '../models/model-id.js';
+} from '../models/model-id';
 
 export type {
   ModelVersion,
-} from '../models/model-version.js';
+} from '../models/model-version';

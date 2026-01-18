@@ -2,7 +2,7 @@ import { type } from "arktype";
 import {
   modelFileSchema,
   modelImageSchema,
-} from "./shared-types.js";
+} from "./shared-types";
 
 /**
  * Model version stats schema for the model-version endpoint

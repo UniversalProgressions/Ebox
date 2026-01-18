@@ -1,18 +1,9 @@
 {
   "name": "ebox",
-  "module": "index.ts",
-  "type": "module",
+  "version": "1.0.0",
   "private": true,
-  "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
-  },
+  "workspaces": ["packages/*", "apps/*"],
   "dependencies": {
-    "arkenv": "^0.8.3",
-    "arktype": "^2.1.29",
-    "ky": "^1.14.2",
-    "neverthrow": "^8.2.0"
+    "arktype": "^2.1.29"
   }
 }

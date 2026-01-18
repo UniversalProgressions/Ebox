@@ -1,0 +1,32 @@
+{
+  "name": "bun-react-template",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prisma:generate": "prisma generate --schema ./schema.prisma",
+    "prisma:reset": "prisma migrate reset --schema ./schema.prisma",
+    "prisma:migrate": "prisma migrate dev --schema ./schema.prisma"
+  },
+  "dependencies": {
+    "@up/civitai-api": "workspace:*",
+    "arktype": "^2.1.29",
+    "bun-plugin-tailwind": "^0.1.2",
+    "conf": "^15.0.2",
+    "load-json-file": "^7.0.1",
+    "path-exists": "^5.0.0",
+    "path-scurry": "^2.0.1",
+    "prisma-adapter-bun-sqlite": "^0.6.6",
+    "react": "^19",
+    "react-dom": "^19",
+    "sanitize-basename": "^2.0.2",
+    "tailwindcss": "^4.1.11",
+    "write-json-file": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "prisma": "^7.2.0"
+  }
+}

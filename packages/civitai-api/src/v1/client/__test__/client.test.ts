@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, vi, mock } from 'bun:test';
-import { createCivitaiClient } from '../index.js';
+import { describe, it, expect, beforeEach, vi } from 'bun:test';
+import { createCivitaiClient } from '../index';
 
 // Mock ky
 vi.mock('ky', () => {

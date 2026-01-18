@@ -4,13 +4,13 @@ import { type } from 'arktype';
 
 import type { ClientConfig } from './config';
 import { mergeConfig } from './config';
-import type { CivitaiError, ValidationError } from './errors.js';
-import { createNetworkError, createBadRequestError, createUnauthorizedError, createNotFoundError, createValidationError } from './errors.js';
+import type { CivitaiError, ValidationError } from './errors';
+import { createNetworkError, createBadRequestError, createUnauthorizedError, createNotFoundError, createValidationError } from './errors';
 
 // Import schema definitions
-import { modelsResponseSchema } from '../models/models.js';
-import { creatorsResponseSchema } from '../models/creators.js';
-import { modelVersionSchema } from '../models/model-version.js';
+import { modelsResponseSchema } from '../models/models';
+import { creatorsResponseSchema } from '../models/creators';
+import { modelVersionSchema } from '../models/model-version';
 
 /**
  * Civitai API Client Core Class

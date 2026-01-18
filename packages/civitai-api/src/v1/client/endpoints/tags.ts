@@ -1,6 +1,6 @@
 import type { Result } from 'neverthrow';
-import type { CivitaiClient } from '../client.js';
-import type { CivitaiError } from '../errors.js';
+import type { CivitaiClient } from '../client';
+import type { CivitaiError } from '../errors';
 
 /**
  * Tags endpoint interface

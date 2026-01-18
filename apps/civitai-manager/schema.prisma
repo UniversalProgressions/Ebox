@@ -1,0 +1,145 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider = "sqlite"
+  // url      = "file:./db.sqlite3"
+}
+
+generator client {
+  provider = "prisma-client"
+  output   = "./src/db/generated"
+
+  runtime                = "bun"
+  moduleFormat           = "esm"
+  generatedFileExtension = "ts"
+  importFileExtension    = ""
+}
+
+// generator prismabox {
+//   provider                    = "prismabox"
+//   // you can optionally specify the output location. Defaults to ./prismabox
+//   output                      = "./generated/typebox"
+//   // if you want, you can customize the imported variable name that is used for the schemes. Defaults to "Type" which is what the standard typebox package offers
+//   typeboxImportVariableName   = "t"
+//   // you also can specify the dependency from which the above import should happen. This is useful if a package re-exports the typebox package and you would like to use that
+//   typeboxImportDependencyName = "elysia"
+//   // by default the generated schemes do not allow additional properties. You can allow them by setting this to true
+//   additionalProperties        = true
+//   // optionally enable the data model generation. See the data model section below for more info
+//   inputModel                  = true
+// }
+
+model Creator {
+  id       Int     @id @default(autoincrement())
+  username String  @unique
+  link     String?
+  image    String?
+
+  models Model[]
+
+  @@index([username])
+}
+
+// Lookup table for model types (e.g., 'Checkpoint', 'Textual Inversion', etc.)
+model ModelType { 
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  models Model[]
+
+  @@index([name])
+}
+
+model Model {
+  id            Int            @id
+  name          String
+  creatorId     Int?
+  typeId        Int
+  nsfw          Boolean
+  nsfwLevel     Int
+  modelVersions ModelVersion[]
+  tags          Tag[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  creator Creator?  @relation(fields: [creatorId], references: [id])
+  type    ModelType @relation(fields: [typeId], references: [id])
+
+  @@index([name, typeId, creatorId, nsfw, nsfwLevel])
+}
+
+model Tag {
+  id     Int     @id @default(autoincrement())
+  name   String  @unique
+  models Model[]
+
+  @@index([name])
+}
+
+// Lookup table for base models (e.g., 'Stable Diffusion 1.5', 'Stable Diffusion 2.1', etc.)
+model BaseModel {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  modelVersions  ModelVersion[]
+  baseModelTypes BaseModelType[]
+
+  @@index([name])
+}
+
+// Lookup table for base model types (e.g., 'Standard', 'SD 2.1 768px', etc.)
+model BaseModelType {
+  id          Int    @id @default(autoincrement())
+  name        String @unique
+  baseModelId Int
+
+  modelVersions ModelVersion[]
+  baseModel     BaseModel      @relation(fields: [baseModelId], references: [id])
+
+  @@index([name, baseModelId])
+}
+
+model ModelVersion {
+  id              Int       @id
+  modelId         Int
+  name            String
+  baseModelId     Int
+  baseModelTypeId Int?
+  publishedAt     DateTime?
+  nsfwLevel       Int
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  model         Model               @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  baseModel     BaseModel           @relation(fields: [baseModelId], references: [id])
+  baseModelType BaseModelType?      @relation(fields: [baseModelTypeId], references: [id])
+  files         ModelVersionFile[]
+  images        ModelVersionImage[]
+
+  @@index([modelId, name, baseModelId, baseModelTypeId, publishedAt, nsfwLevel])
+}
+
+model ModelVersionFile {
+  id          Int    @id
+  sizeKB      Float
+  name        String
+  type        String
+  downloadUrl String
+
+  modelVersionId Int
+  modelVersion   ModelVersion @relation(fields: [modelVersionId], references: [id], onDelete: Cascade)
+}
+
+model ModelVersionImage {
+  id        Int    @id
+  url       String
+  nsfwLevel Int
+  width     Int
+  height    Int
+  hash      String
+  type      String
+
+  modelVersionId Int
+  modelVersion   ModelVersion @relation(fields: [modelVersionId], references: [id], onDelete: Cascade)
+}

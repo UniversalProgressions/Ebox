@@ -1,5 +1,5 @@
 import { type } from "arktype";
-import { paginationMetadataSchema } from "./shared-types.js";
+import { paginationMetadataSchema } from "./shared-types";
 
 /**
  * Creator schema for Civitai API

@@ -1,5 +1,5 @@
-import { createCivitaiClient } from '../src/v1/client/index.js';
-import { isValidationError } from '../src/v1/client/errors.js';
+import { createCivitaiClient } from '../src/v1/index';
+import { isValidationError } from '../src/v1/client/errors';
 
 async function validationDemo() {
   console.log('=== Arktype Validation Demo ===\n');

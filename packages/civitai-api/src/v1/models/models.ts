@@ -5,16 +5,16 @@ import {
   modelsRequestPeriodSchema,
   baseModelsSchema,
   checkpointTypeSchema,
-} from "./base-models/misc.js";
+} from "./base-models/misc";
 import { type } from "arktype";
-import { creatorSchema } from "./creators.js";
+import { creatorSchema } from "./creators";
 import {
   modelFileSchema,
   modelImageSchema,
   modelVersionStatsSchema,
   modelStatsSchema,
   paginationMetadataSchema,
-} from "./shared-types.js";
+} from "./shared-types";
 
 /**
  * Model version schema for the models endpoint

@@ -1,8 +1,8 @@
 import type { Result } from 'neverthrow';
-import type { CivitaiClient } from '../client.js';
-import type { CivitaiError } from '../errors.js';
-import type { ModelsResponse, ModelsRequestOptions } from '../../models/models.js';
-import type { ModelById } from '../../models/model-id.js';
+import type { CivitaiClient } from '../client';
+import type { CivitaiError } from '../errors';
+import type { ModelsResponse, ModelsRequestOptions } from '../../models/models';
+import type { ModelById } from '../../models/model-id';
 
 /**
  * Models endpoint interface

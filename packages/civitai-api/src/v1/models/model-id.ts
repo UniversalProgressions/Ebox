@@ -1,12 +1,12 @@
-import { modelTypesSchema } from "./base-models/misc.js";
+import { modelTypesSchema } from "./base-models/misc";
 import { type } from "arktype";
-import { creatorSchema } from "./creators.js";
+import { creatorSchema } from "./creators";
 import {
   modelFileSchema,
   modelImageSchema,
   modelVersionStatsSchema,
   modelStatsSchema,
-} from "./shared-types.js";
+} from "./shared-types";
 
 /**
  * Model version schema for the model-id endpoint

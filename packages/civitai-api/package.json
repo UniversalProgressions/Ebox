@@ -1,0 +1,50 @@
+{
+  "name": "@up/civitai-api",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "./v1": {
+      "import": "./dist/v1/index.js",
+      "types": "./dist/v1/index.d.ts"
+    },
+    "./v1/client": {
+      "import": "./dist/v1/client/index.js",
+      "types": "./dist/v1/client/index.d.ts"
+    },
+    "./v1/models": {
+      "import": "./dist/v1/models/index.js",
+      "types": "./dist/v1/models/index.d.ts"
+    },
+    "./v1/models/unified": {
+      "import": "./dist/v1/models/model-version-abstract.js",
+      "types": "./dist/v1/models/model-version-abstract.d.ts"
+    },
+    "./v1/utils": {
+      "import": "./dist/v1/utils.js",
+      "types": "./dist/v1/utils.d.ts"
+    }
+  },
+  "scripts": {
+    "dev": "bun --watch index.ts",
+    "test": "bun test",
+    "build": "bun run build:clean && bun run build:tsc",
+    "build:clean": "if exist dist rmdir /s /q dist",
+    "build:tsc": "tsc --project tsconfig.build.json",
+    "prepublishOnly": "bun run build"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "arkenv": "^0.9.0",
+    "arktype": "^2.1.29",
+    "ky": "^1.14.2",
+    "neverthrow": "^8.2.0"
+  }
+}

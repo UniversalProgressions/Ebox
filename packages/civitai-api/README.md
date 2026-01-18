@@ -11,21 +11,23 @@ A comprehensive TypeScript client for the Civitai API with runtime type safety u
 - **Result-based Error Handling**: Using neverthrow for type-safe error handling
 - **Configurable HTTP Client**: Built on Ky with support for timeouts, proxies, and custom headers
 - **Modular Design**: Separated endpoint interfaces and implementations
+- **Versioned Exports**: Clean API version separation using package.json exports
+- **Unified Type System**: Consistent types across different API endpoints
 
 ## Installation
 
 ```bash
 # Using bun (recommended)
-bun add ky neverthrow arktype
+bun add @up/civitai-api
 
 # Using npm
-npm install ky neverthrow arktype
+npm install @up/civitai-api
 
 # Using yarn
-yarn add ky neverthrow arktype
+yarn add @up/civitai-api
 
 # Using pnpm
-pnpm add ky neverthrow arktype
+pnpm add @up/civitai-api
 ```
 
 ## Quick Start
@@ -33,12 +35,12 @@ pnpm add ky neverthrow arktype
 ### Using the HTTP Client
 
 ```typescript
-import { createCivitaiClient } from 'civitai-api';
+import { createCivitaiClient } from '@up/civitai-api/v1';
 
 // Create client
 const client = createCivitaiClient({
   apiKey: process.env.CIVITAI_API_KEY, // optional
-  timeout: 60000, // optional, default: 30000
+  timeout: 30000, // optional, default: 30000
   validateResponses: true, // optional, enable response validation
 });
 
@@ -60,40 +62,29 @@ if (result.isOk()) {
 }
 ```
 
-### Using Type Definitions Only
+### Using the Unified ModelVersions Client
 
 ```typescript
-import { 
-  Model, 
-  ModelsResponse, 
-  ModelsRequestOptions,
-  Creator,
-  CreatorsResponse,
-  CreatorsRequestOptions,
-  ModelById,
-  ModelVersion
-} from 'civitai-api';
+import { createCivitaiClient } from '@up/civitai-api/v1';
 
-// Define search parameters with type safety
-const searchParams: ModelsRequestOptions = {
-  limit: 10,
-  page: 1,
-  query: 'stable diffusion',
-  types: ['Checkpoint', 'LORA'],
-  sort: 'Most Downloaded',
-  period: 'Month',
-  nsfw: false,
-  baseModels: ['SDXL 1.0', 'SD 1.5']
-};
+const client = createCivitaiClient();
 
-// Use with your preferred HTTP client
-async function fetchModels(params: ModelsRequestOptions) {
-  const queryString = new URLSearchParams(params as any).toString();
-  const response = await fetch(`https://civitai.com/api/v1/models?${queryString}`);
-  const data = await response.json();
+// Get unified ModelVersion (works with any endpoint)
+const result = await client.unifiedModelVersions.getById(12345);
+
+if (result.isOk()) {
+  const version = result.value;
+  console.log(`ModelVersion: ${version.name}`);
+  console.log(`Base Model: ${version.baseModel}`);
+  console.log(`Files: ${version.files.length}`);
+  console.log(`Images: ${version.images.length}`);
   
-  // Data will match the ModelsResponse type
-  return data;
+  // Get core fields only (safe for all endpoints)
+  const coreResult = await client.unifiedModelVersions.getCoreById(12345);
+  if (coreResult.isOk()) {
+    const core = coreResult.value;
+    console.log(`Core: ${core.id} - ${core.name}`);
+  }
 }
 ```
 
@@ -136,6 +127,56 @@ const versionResult = await client.modelVersions.getById(5678);
 const hashResult = await client.modelVersions.getByHash('abc123');
 ```
 
+### Unified Model Versions
+
+```typescript
+// Get unified ModelVersion by ID (smart endpoint selection)
+const unifiedResult = await client.unifiedModelVersions.getById(12345);
+
+// Get ModelVersion core fields only
+const coreResult = await client.unifiedModelVersions.getCoreById(12345);
+
+// Get ModelVersion from a model
+const fromModelResult = await client.unifiedModelVersions.getFromModel(123, 456);
+
+// Get multiple ModelVersions
+const batchResult = await client.unifiedModelVersions.getBatch([123, 456, 789]);
+
+// Get all ModelVersions from a model
+const allFromModelResult = await client.unifiedModelVersions.getAllFromModel(123);
+
+// Get ModelVersion by hash
+const byHashResult = await client.unifiedModelVersions.getByHash('abc123');
+```
+
+### Unified Models
+
+```typescript
+// Get unified Model by ID (smart endpoint selection)
+const unifiedResult = await client.unifiedModels.getUnifiedById(123);
+
+// Get Model core fields only
+const coreResult = await client.unifiedModels.getCoreById(123);
+
+// Get unified Models from list endpoint
+const listResult = await client.unifiedModels.getUnifiedFromList({
+  limit: 10,
+  types: ['Checkpoint']
+});
+
+// Get multiple unified Models
+const batchResult = await client.unifiedModels.getUnifiedBatch([123, 456, 789]);
+
+// Search for unified Models
+const searchResult = await client.unifiedModels.searchUnified({
+  query: 'anime',
+  limit: 5
+});
+
+// Get unified Model with specific version
+const modelWithVersionResult = await client.unifiedModels.getUnifiedWithVersion(123, 456);
+```
+
 ### Tags
 
 ```typescript
@@ -176,14 +217,14 @@ The client uses `neverthrow`'s `Result<T, E>` pattern for type-safe error handli
 
 ```typescript
 import type { Result } from 'neverthrow';
-import type { CivitaiError } from 'civitai-api';
+import type { CivitaiError } from '@up/civitai-api/v1';
 import { 
   isNetworkError, 
   isValidationError, 
   isBadRequestError,
   isUnauthorizedError,
   isNotFoundError 
-} from 'civitai-api';
+} from '@up/civitai-api/v1';
 
 // All API methods return Promise<Result<T, CivitaiError>>
 const result: Result<ModelsResponse, CivitaiError> = await client.models.list();
@@ -222,102 +263,288 @@ if (result.isOk()) {
 - `NOT_FOUND`: HTTP 404 error (resource does not exist)
 - Other HTTP errors: Automatically categorized by status code
 
-### Arktype Validation Errors
+## Versioned Exports
 
-When `validateResponses` is enabled, the client uses Arktype for runtime validation. Arktype provides detailed, human-readable error messages:
+The package uses Node.js package.json `exports` field for versioned imports, requiring you to import specific API versions. This ensures clear version boundaries and prevents accidental usage of wrong API versions.
+
+### Available Exports
 
 ```typescript
-// Example Arktype error output:
-// - "Expected number at 'items[0].id', got string ('not-a-number')"
-// - "Expected string at 'items[0].name', got number (123)"
-// - "Expected one of ['Checkpoint', 'LORA', ...] at 'items[0].type', got 'InvalidType'"
-// - "Expected boolean at 'items[0].poi', got string ('not-boolean')"
+// Import v1 API (main entry point)
+import { createCivitaiClient } from '@up/civitai-api/v1';
 
-// You can access Arktype's detailed error information:
-if (isValidationError(error)) {
-  console.error('Validation summary:', error.details.summary);
-  console.error('Problems:', error.details.problems);
-  console.error('Errors by path:', error.details.byPath);
+// Import v1 models types
+import type { Model, ModelVersion } from '@up/civitai-api/v1/models';
+
+// Import v1 client types
+import type { ClientConfig } from '@up/civitai-api/v1/client';
+
+// Import unified type system
+import { ModelVersionAny, toModelVersionCore } from '@up/civitai-api/v1/models/unified';
+
+// Import utilities
+import { extractFilenameFromUrl } from '@up/civitai-api/v1/utils';
+```
+
+### Why Versioned Exports?
+
+1. **Clear API Boundaries**: Each version has its own import path
+2. **Future-Proof**: Easy to add v2, v3, etc. without breaking existing code
+3. **Explicit Dependencies**: Developers know exactly which API version they're using
+4. **Better Tooling**: TypeScript and bundlers can optimize version-specific code
+
+### Package.json Exports Configuration
+
+The package uses the following exports configuration:
+
+```json
+{
+  "exports": {
+    "./v1": {
+      "import": "./dist/v1/index.js",
+      "types": "./dist/v1/index.d.ts"
+    },
+    "./v1/client": {
+      "import": "./dist/v1/client/index.js",
+      "types": "./dist/v1/client/index.d.ts"
+    },
+    "./v1/models": {
+      "import": "./dist/v1/models/index.js",
+      "types": "./dist/v1/models/index.d.ts"
+    },
+    "./v1/models/unified": {
+      "import": "./dist/v1/models/model-version-abstract.js",
+      "types": "./dist/v1/models/model-version-abstract.d.ts"
+    },
+    "./v1/utils": {
+      "import": "./dist/v1/utils.js",
+      "types": "./dist/v1/utils.d.ts"
+    },
+    "./package.json": "./package.json"
+  }
 }
 ```
 
-## Advanced Usage
+### Important Note
 
-### Updating Configuration
+**Root path imports are not available** (e.g., `import { createCivitaiClient } from '@up/civitai-api'`). You must specify the API version explicitly:
 
 ```typescript
-// Update configuration at runtime
-client.updateConfig({
-  timeout: 120000,
-  validateResponses: true,
-  headers: { 'X-Custom-Header': 'value' },
-});
+// ✅ Correct - explicit version
+import { createCivitaiClient } from '@up/civitai-api/v1';
+
+// ❌ Incorrect - root path no longer works
+import { createCivitaiClient } from '@up/civitai-api';
 ```
 
-### Direct HTTP Client Access
+This design ensures that when new API versions are released, your code continues to use the version you explicitly imported, preventing accidental breaking changes.
+
+## Unified Type System
+
+Civitai API different endpoints return similar but slightly different JSON structures. To provide precise type safety while maintaining flexibility, we provide a unified type system for both ModelVersion and Model types:
+
+### Core Concepts
+
+#### For ModelVersion:
+- **`ModelVersionCore`** - Contains only fields present in ALL ModelVersion endpoints
+- **`ModelVersionAny`** - Union type of all endpoint-specific ModelVersion types
+- **Type guards** - Functions to check which endpoint a ModelVersion came from
+- **Utility functions** - Safe access to endpoint-specific fields
+
+#### For Model:
+- **`ModelCore`** - Contains only fields present in ALL Model endpoints
+- **`ModelAny`** - Union type of all endpoint-specific Model types
+- **Type guards** - Functions to check which endpoint a Model came from
+- **Utility functions** - Safe access to endpoint-specific fields
+
+### Usage Example
 
 ```typescript
-// Get underlying HTTP client
-const httpClient = client.client;
+import {
+  ModelVersionCore,
+  ModelVersionAny,
+  ModelCore,
+  ModelAny,
+  toModelVersionCore,
+  toModelCore,
+  getModelId,
+  getIndex,
+  getAvailability,
+  getPublishedAt,
+  isModelsVersion,
+  isModelByIdVersion,
+  isModelVersionEndpoint,
+  isModelsEndpointModel,
+  isModelByIdEndpointModel,
+  findModelVersion,
+  findModel,
+} from '@up/civitai-api/v1/models/unified';
 
-// Use HTTP methods directly
-const result = await httpClient.get<CustomType>('/custom-endpoint', {
-  searchParams: { param1: 'value1' },
-  headers: { 'X-Custom-Header': 'value' },
-  validateResponse: true, // Enable validation for this request
-});
-```
-
-### Custom Endpoints
-
-```typescript
-import { CivitaiClient } from 'civitai-api';
-
-class CustomEndpoint {
-  constructor(private client: CivitaiClient) {}
+// Example: Process ModelVersion from any endpoint
+function processModelVersion(version: ModelVersionAny) {
+  // Extract core fields (safe for all endpoints)
+  const core: ModelVersionCore = toModelVersionCore(version);
+  console.log(`Processing ${core.name} (ID: ${core.id})`);
   
-  async customMethod(id: number) {
-    return this.client.get<CustomResponse>(`/custom/${id}`);
+  // Safely access endpoint-specific fields
+  const modelId = getModelId(version); // undefined for some endpoints
+  const index = getIndex(version); // undefined for model-version endpoint
+  const availability = getAvailability(version); // undefined for model-version endpoint
+  const publishedAt = getPublishedAt(version); // handles different nullability
+  
+  // Use type guards for conditional logic
+  if (isModelsVersion(version)) {
+    console.log(`From models endpoint, index: ${version.index}`);
+  } else if (isModelByIdVersion(version)) {
+    console.log(`From model-id endpoint, index: ${version.index}`);
+  } else if (isModelVersionEndpoint(version)) {
+    console.log(`From model-version endpoint, modelId: ${version.modelId}`);
   }
 }
 
-// Use custom endpoint
-const customEndpoint = new CustomEndpoint(client.client);
-```
+// Example: Process Model from any endpoint
+function processModel(model: ModelAny) {
+  // Extract core fields (safe for all endpoints)
+  const core: ModelCore = toModelCore(model);
+  console.log(`Processing ${core.name} (ID: ${core.id})`);
+  console.log(`Type: ${core.type}, Versions: ${core.modelVersions.length}`);
+  
+  // Use type guards for conditional logic
+  if (isModelsEndpointModel(model)) {
+    console.log(`From models endpoint, first version index: ${model.modelVersions[0]?.index}`);
+  } else if (isModelByIdEndpointModel(model)) {
+    console.log(`From model-id endpoint, first version index: ${model.modelVersions[0]?.index}`);
+  }
+}
 
-## Design Philosophy
+// Example: Find version in array (works with any endpoint type)
+const versions: ModelVersionAny[] = [...];
+const foundVersion = findModelVersion(versions, 123);
+if (foundVersion) {
+  processModelVersion(foundVersion);
+}
 
-### Endpoint-Specific Type Definitions
-
-Civitai API different endpoints return similar but slightly different JSON structures. To provide precise type safety, this package defines independent types for each endpoint:
-
-- `ModelById` - From `/api/v1/models/{id}` endpoint
-- `ModelVersion` - From `/api/v1/model-versions/{id}` endpoint  
-- `Model` - From `/api/v1/models` list endpoint
-
-This design ensures:
-1. **Type Precision**: Each type exactly matches the corresponding endpoint response
-2. **Developer Experience**: IDE autocompletion and type checking are more accurate
-3. **Runtime Safety**: ArkType validation matches API responses exactly
-
-### ArkType Integration
-
-This package uses ArkType for runtime type validation. All exported types are created using ArkType's `type()` function, which provides both TypeScript types and runtime validators.
-
-```typescript
-import { modelSchema, Model } from 'civitai-api';
-
-// Runtime validation
-const data = { /* ... */ };
-const result = modelSchema(data);
-
-if (result instanceof type.errors) {
-  console.error('Validation failed:', result.summary);
-} else {
-  // Type-safe access
-  const validModel: Model = result;
+// Example: Find model in array (works with any endpoint type)
+const models: ModelAny[] = [...];
+const foundModel = findModel(models, 456);
+if (foundModel) {
+  processModel(foundModel);
 }
 ```
+
+## Image ID Extraction Utilities
+
+Civitai API sometimes returns `null` for `ModelImage.id`, but the ID can be extracted from the image URL. The package provides utilities to handle this scenario at different abstraction levels:
+
+### Core Utility Functions
+
+#### 1. **Low-level URL Processing** (`extractIdFromImageUrl`)
+```typescript
+import { extractIdFromImageUrl } from '@up/civitai-api/v1/utils';
+
+// Extract ID directly from URL
+const url = "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/cbe20dcf-7721-4f34-bc24-9ff14b96cab2/width=1024/1743606.jpeg";
+const idResult = extractIdFromImageUrl(url);
+
+if (idResult.isOk()) {
+  console.log(`Extracted ID: ${idResult.value}`); // Output: 1743606
+} else {
+  console.error(`Failed to extract ID: ${idResult.error.message}`);
+}
+```
+
+#### 2. **ModelImage-specific Functions** (`getImageId`, `ensureImageIds`)
+```typescript
+import { getImageId, ensureImageIds } from '@up/civitai-api/v1/models/unified';
+
+// Example: Extract ID from a single ModelImage
+const image = {
+  id: null,
+  url: "https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/cbe20dcf-7721-4f34-bc24-9ff14b96cab2/width=1024/1743606.jpeg",
+  nsfwLevel: 1,
+  width: 512,
+  height: 512,
+  hash: "abc123",
+  type: "image",
+};
+
+const idResult = getImageId(image);
+if (idResult.isOk()) {
+  console.log(`Extracted ID: ${idResult.value}`); // Output: 1743606
+} else {
+  console.error(`Failed to extract ID: ${idResult.error.message}`);
+}
+
+// Example: Process multiple ModelImages
+const images = [
+  { id: 111, url: "https://example.com/image1.jpg", /* ... */ },
+  { id: null, url: "https://image.civitai.com/.../222222.jpeg", /* ... */ },
+  { id: 333, url: "https://example.com/image3.jpg", /* ... */ },
+];
+
+const processedResult = ensureImageIds(images);
+if (processedResult.isOk()) {
+  const processedImages = processedResult.value;
+  // All images now have non-null IDs
+  processedImages.forEach(img => {
+    console.log(`Image ID: ${img.id}`);
+  });
+}
+```
+
+### How It Works
+
+#### URL Pattern
+Civitai image URLs typically follow this pattern:
+```
+https://image.civitai.com/{path}/{width}/{imageId}.{extension}
+```
+Example: `https://image.civitai.com/xG1nkqKTMzGDvpLrqFT7WA/cbe20dcf-7721-4f34-bc24-9ff14b96cab2/width=1024/1743606.jpeg`
+
+#### ID Extraction Process
+1. **Filename Extraction**: Uses `extractFilenameFromUrl()` to get the filename from URL
+2. **Extension Removal**: Uses `removeFileExtension()` to remove file extension
+3. **Numeric Parsing**: Parses the remaining string as integer
+
+Examples:
+- URL: `.../1743606.jpeg` → ID: `1743606`
+- URL: `.../6039981.png` → ID: `6039981`
+- URL: `.../123456` (no extension) → ID: `123456`
+
+#### Error Handling
+All functions return `Result<T, Error>` for type-safe error handling:
+- Returns existing ID if already present in `ModelImage`
+- Extracts ID from URL if `id` is `null`
+- Returns error for:
+  - Invalid URLs
+  - URLs without filename
+  - Non-numeric filenames
+
+### Architecture Design
+
+The utilities are organized in a layered architecture:
+
+1. **Base Layer** (`utils.ts`):
+   - `extractIdFromImageUrl(url: string): Result<number, Error>`
+   - Generic URL processing, reusable across the codebase
+
+2. **Domain Layer** (`model-version-abstract.ts`):
+   - `getImageId(image: ModelImage): Result<number, Error>`
+   - `ensureImageIds(images: ModelImage[]): Result<ModelImage[], Error>`
+   - Type-specific functions that use the base utilities
+
+This design provides:
+- **Code Reuse**: Base function can be used independently
+- **Type Safety**: Domain functions work with specific types
+- **Separation of Concerns**: URL processing vs. domain logic
+
+### Use Cases
+
+- **Data Processing**: When working with Civitai API responses that have `null` image IDs
+- **File Management**: When organizing downloaded images by their Civitai IDs
+- **Database Operations**: When storing images with their proper IDs
+- **Batch Processing**: When processing multiple images at once
+- **URL Analysis**: When you only have the URL and need to extract the ID
 
 ## Available Type Arrays
 
@@ -330,7 +557,7 @@ import {
   ModelsRequestPeriodArray,
   BaseModelsArray,
   CheckpointTypeArray 
-} from 'civitai-api';
+} from '@up/civitai-api/v1';
 
 // Use in UI components or validation
 console.log(ModelTypesArray); // ['Checkpoint', 'TextualInversion', ...]
@@ -353,6 +580,12 @@ Check the `examples/` directory for complete usage examples:
 
 - `basic-usage.ts` - Basic client usage
 - `validation-demo.ts` - Arktype validation error handling demonstration
+- `unified-types-demo.ts` - Unified type system usage demonstration
+- `unified-client-demo.ts` - Unified client usage demonstration
+
+## Migration Guide
+
+If you're migrating from endpoint-specific types to the unified type system, check the [MIGRATION-GUIDE.md](MIGRATION-GUIDE.md) for detailed instructions and best practices.
 
 ## Development
 
@@ -370,12 +603,15 @@ src/
 │   │       ├── creators.ts       # Creators endpoint
 │   │       ├── models.ts         # Models endpoint
 │   │       ├── model-versions.ts # Model versions endpoint
+│   │       ├── unified-model-versions.ts # Unified model versions endpoint
+│   │       ├── unified-models.ts         # Unified models endpoint
 │   │       └── tags.ts           # Tags endpoint
 │   └── models/                   # Data model definitions
 │       ├── creators.ts
 │       ├── model-id.ts
 │       ├── model-version.ts
 │       ├── models.ts
+│       ├── model-version-abstract.ts # Unified type system (ModelVersion & Model)
 │       └── shared-types.ts
 └── index.ts                      # Package main exports
 ```
