@@ -1,41 +1,48 @@
 import { prisma } from "../client";
-import type { ModelsRequestSort } from "@up/civitai-api";
+import type { ModelsRequestSort } from "@up/civitai-api/v1";
 import { findOrCreateOneCreator } from "./creator";
 import { findOrCreateOneModelType } from "./modelType";
-import type { ModelsRequestOptions as ModelsRequestOpts, Model } from "@up/civitai-api";
+import type { ModelsRequestOptions as ModelsRequestOpts, Model } from "@up/civitai-api/v1";
 import type { ModelOrderByWithRelationInput, ModelWhereInput } from "../generated/models";
-import { extractFilenameFromUrl } from "../sharedUtils";
+import { DatabaseError } from "../errors";
 
 // export type ModelWithAllRelations = Static<typeof ModelTypeboxSchema>
 
 export async function findOrCreateOneModelId(modelId: Model) {
-  const creatorRecord = modelId.creator
-    ? await findOrCreateOneCreator(modelId.creator)
-    : undefined;
-  const modelTypeRecord = await findOrCreateOneModelType(modelId.type);
+  try {
+    const creatorRecord = modelId.creator
+      ? await findOrCreateOneCreator(modelId.creator)
+      : undefined;
+    const modelTypeRecord = await findOrCreateOneModelType(modelId.type);
 
-  const record = await prisma.model.upsert({
-    where: {
-      id: modelId.id,
-    },
-    update: {},
-    create: {
-      id: modelId.id,
-      name: modelId.name,
-      creatorId: creatorRecord ? creatorRecord.id : undefined,
-      typeId: modelTypeRecord.id,
-      nsfw: modelId.nsfw,
-      nsfwLevel: modelId.nsfwLevel,
-      tags: {
-        connectOrCreate: modelId.tags.map((tag) => ({
-          where: { name: tag },
-          create: { name: tag },
-        })),
+    const record = await prisma.model.upsert({
+      where: {
+        id: modelId.id,
       },
-      previewFile: modelId.modelVersions[0]?.images[0]?.url ? extractFilenameFromUrl(modelId.modelVersions[0]?.images[0]?.url) : undefined
-    },
-  });
-  return record;
+      update: {},
+      create: {
+        id: modelId.id,
+        name: modelId.name,
+        creatorId: creatorRecord ? creatorRecord.id : undefined,
+        typeId: modelTypeRecord.id,
+        nsfw: modelId.nsfw,
+        nsfwLevel: modelId.nsfwLevel,
+        tags: {
+          connectOrCreate: modelId.tags.map((tag) => ({
+            where: { name: tag },
+            create: { name: tag },
+          })),
+        },
+      },
+    });
+    return record;
+  } catch (error) {
+    throw new DatabaseError(
+      `Failed to find or create model ID ${modelId.id}`,
+      error,
+      'model.upsert'
+    );
+  }
 }
 
 function processCursorPaginationFindMany(params: ModelsRequestOpts): ModelWhereInput {
@@ -82,9 +89,40 @@ function processSort(sortType?: ModelsRequestSort): ModelOrderByWithRelationInpu
 }
 
 export async function cursorPaginationQuery(params: ModelsRequestOpts) {
-  const [records, totalCount] = await prisma.$transaction([
-    prisma.model.findMany({
+  try {
+    const [records, totalCount] = await prisma.$transaction([
+      prisma.model.findMany({
+        take: 20,
+        where: processCursorPaginationFindMany(params),
+        include: {
+          creator: true,
+          modelVersions: true,
+          tags: true,
+          type: true,
+        },
+        orderBy: processSort(params.sort)
+      }),
+      prisma.model.count({
+        where: processCursorPaginationFindMany(params),
+      }),
+    ])
+
+    return { records, totalCount };
+  } catch (error) {
+    throw new DatabaseError(
+      `Failed to execute cursor pagination query`,
+      error,
+      'model.findMany & count'
+    );
+  }
+}
+
+export async function cursorPaginationNext(params: ModelsRequestOpts, modelIdAsCursor: number) {
+  try {
+    const records = await prisma.model.findMany({
+      cursor: { id: modelIdAsCursor },
       take: 20,
+      skip: 1,
       where: processCursorPaginationFindMany(params),
       include: {
         creator: true,
@@ -93,58 +131,51 @@ export async function cursorPaginationQuery(params: ModelsRequestOpts) {
         type: true,
       },
       orderBy: processSort(params.sort)
-    }),
-    prisma.model.count({
-      where: processCursorPaginationFindMany(params),
-    }),
-  ])
-
-  return { records, totalCount }
-}
-
-export async function cursorPaginationNext(params: ModelsRequestOpts, modelIdAsCursor: number) {
-  const records = await prisma.model.findMany({
-    cursor: { id: modelIdAsCursor },
-    take: 20,
-    skip: 1,
-    where: processCursorPaginationFindMany(params),
-    include: {
-      creator: true,
-      modelVersions: true,
-      tags: true,
-      type: true,
-    },
-    orderBy: processSort(params.sort)
-  })
-  type test = typeof records
-  return records
+    })
+    return records;
+  } catch (error) {
+    throw new DatabaseError(
+      `Failed to execute cursor pagination next for cursor ${modelIdAsCursor}`,
+      error,
+      'model.findMany'
+    );
+  }
 }
 
 export async function simplePagination(params: ModelsRequestOpts) {
   // defaultPageSize
   if (params.limit === undefined) {
-    params.limit = 20
+    params.limit = 20;
   }
   if (params.page === undefined || params.page < 1) {
-    params.page = 1
+    params.page = 1;
   }
-  const [records, totalCount] = await prisma.$transaction([
-    prisma.model.findMany({
-      take: params.limit,
-      skip: (params.page - 1) * params.limit,
-      where: processCursorPaginationFindMany(params),
-      include: {
-        creator: true,
-        modelVersions: true,
-        tags: true,
-        type: true,
-      },
-      orderBy: processSort(params.sort)
-    }),
-    prisma.model.count({
-      where: processCursorPaginationFindMany(params),
-    }),
-  ])
 
-  return { records, totalCount }
+  try {
+    const [records, totalCount] = await prisma.$transaction([
+      prisma.model.findMany({
+        take: params.limit,
+        skip: (params.page - 1) * params.limit,
+        where: processCursorPaginationFindMany(params),
+        include: {
+          creator: true,
+          modelVersions: true,
+          tags: true,
+          type: true,
+        },
+        orderBy: processSort(params.sort)
+      }),
+      prisma.model.count({
+        where: processCursorPaginationFindMany(params),
+      }),
+    ])
+
+    return { records, totalCount };
+  } catch (error) {
+    throw new DatabaseError(
+      `Failed to execute simple pagination for page ${params.page}`,
+      error,
+      'model.findMany & count'
+    );
+  }
 }
