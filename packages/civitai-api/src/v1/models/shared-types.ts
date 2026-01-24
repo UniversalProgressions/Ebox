@@ -41,7 +41,7 @@ export const modelImageSchema = type({
   width: "number.integer",
   height: "number.integer",
   hash: "string",
-  type: "string",
+  type: "'image' | 'video'",
 });
 export type ModelImage = typeof modelImageSchema.infer;
 
