@@ -1,5 +1,5 @@
 import { prisma } from "../client";
-import type { Creator } from "@up/civitai-api";
+import type { Creator } from "@up/civitai-api/v1";
 
 export async function upsertOneCreator(creator: Creator) {
   const record = creator.username

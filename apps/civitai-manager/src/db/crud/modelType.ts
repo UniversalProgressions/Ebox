@@ -1,4 +1,4 @@
-import { prisma } from "../../../db/service";
+import { prisma } from "../client";
 
 export async function findOrCreateOneModelType(modelTypeString: string) {
   const record = await prisma.modelType.upsert({

@@ -62,6 +62,7 @@ model Model {
   tags          Tag[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+  jsonData      Json
 
   creator Creator?  @relation(fields: [creatorId], references: [id])
   type    ModelType @relation(fields: [typeId], references: [id])
@@ -110,6 +111,7 @@ model ModelVersion {
   nsfwLevel       Int
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
+  jsonData        Json
 
   model         Model               @relation(fields: [modelId], references: [id], onDelete: Cascade)
   baseModel     BaseModel           @relation(fields: [baseModelId], references: [id])

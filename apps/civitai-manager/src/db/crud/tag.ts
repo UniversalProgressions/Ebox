@@ -1,4 +1,4 @@
-import { prisma } from "../../../db/service";
+import { prisma } from "../client";
 
 export async function searchTag(tag: string) {
   const result = await prisma.tag.findMany({

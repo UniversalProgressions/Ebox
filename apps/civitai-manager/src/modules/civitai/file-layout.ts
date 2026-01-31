@@ -14,7 +14,7 @@ import {
   extractIdFromImageUrl,
   extractFilenameFromUrl
 } from "@up/civitai-api/v1";
-import { getSettings } from "./settings/service";
+import { getSettings } from "../settings/service";
 import { pathExists } from "path-exists";
 import { type Result, err, ok } from "neverthrow";
 
@@ -405,6 +405,7 @@ export class ModelLayout {
     const versionLayout: ModelVersionLayout = {
       id: version.id,
       files: version.files,
+      // @ts-ignore: Type 'string' is not assignable to type "'image' | 'video'".
       images: version.images,
     };
     
