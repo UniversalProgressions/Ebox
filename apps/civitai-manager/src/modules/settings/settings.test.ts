@@ -1,5 +1,6 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test";
-import { settingsService, settingsSchema, type Settings } from "./index";
+import { settingsSchema, type Settings } from "./model";
+import { settingsService } from "./service";
 import { type } from "arktype";
 
 describe("Settings Module", () => {
@@ -97,7 +98,27 @@ describe("Settings Module", () => {
   describe("SettingsService", () => {
     test("should initialize with empty store", () => {
       // This should throw because required fields are missing
-      expect(() => settingsService.getSettings()).toThrow();
+      expect(() => settingsService.getSettings()).toThrow("Settings not configured");
+    });
+
+    test("should return null for unconfigured settings", () => {
+      expect(settingsService.getSettingsOrNull()).toBeNull();
+    });
+
+    test("should check if settings are configured", () => {
+      expect(settingsService.hasSettings()).toBe(false);
+      
+      // Set valid settings
+      const validSettings: Settings = {
+        basePath: "/valid/path",
+        civitai_api_token: "valid_token",
+        gopeed_api_host: "http://localhost:8080"
+      };
+
+      settingsService.updateSettings(validSettings);
+      
+      expect(settingsService.hasSettings()).toBe(true);
+      expect(settingsService.getSettingsOrNull()).not.toBeNull();
     });
 
     test("should update and retrieve settings", () => {

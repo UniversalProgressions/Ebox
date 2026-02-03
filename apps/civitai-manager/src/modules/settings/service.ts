@@ -27,6 +27,11 @@ export class SettingsService {
   getSettings(): Settings {
     const rawData = this.conf.store;
     
+    // If store is empty, throw a specific error
+    if (Object.keys(rawData).length === 0) {
+      throw new Error('Settings not configured');
+    }
+    
     // Validate data using ArkType
     const result = settingsSchema(rawData);
     
@@ -36,6 +41,26 @@ export class SettingsService {
     }
     
     return result;
+  }
+  
+  /**
+   * Get settings or null if not configured
+   * @returns Settings object or null if not configured/invalid
+   */
+  getSettingsOrNull(): Settings | null {
+    try {
+      return this.getSettings();
+    } catch {
+      return null;
+    }
+  }
+  
+  /**
+   * Check if settings are configured and valid
+   * @returns true if settings are configured and valid, false otherwise
+   */
+  hasSettings(): boolean {
+    return this.getSettingsOrNull() !== null;
   }
   
   /**
