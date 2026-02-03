@@ -1,22 +1,26 @@
-import { Button, Form, Input, Alert, Row, Col } from "antd";
+import { Button, Form, Input, Alert, Row, Col, notification } from "antd";
 import { edenTreaty } from "../utils";
 import {
   type Settings,
 } from "../../modules/settings/model";
-import { useActionState, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 
 /**
- * Settings component using React 19's useActionState
+ * Settings component with improved readability using Form.useForm()
  * Handles both initial setup and updates of application settings
  * Features responsive design using Ant Design Grid system
  */
 function SettingsPage() {
-  const [initialSettings, setInitialSettings] = useState<Settings | null>(null);
+  // Form instance for better state management and readability
+  const [form] = Form.useForm();
+  
+  // Component state - grouped for clarity
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isInitialSetup, setIsInitialSetup] = useState(false);
 
-  // Load initial settings using useEffect
+  // Load initial settings - separated for better readability
   useEffect(() => {
     const loadSettings = async () => {
       try {
@@ -25,11 +29,33 @@ function SettingsPage() {
         
         if (response.error) {
           setError(`Failed to load settings: ${JSON.stringify(response.error)}`);
-        } else {
-          const settingsData = response.data;
-          setInitialSettings(settingsData);
-          setIsInitialSetup(settingsData === null);
+          return;
         }
+        
+        const settingsData = response.data;
+        const isSetupRequired = settingsData === null;
+        
+        // Update form with loaded values or empty values for initial setup
+        if (settingsData) {
+          form.setFieldsValue({
+            civitai_api_token: settingsData.civitai_api_token,
+            basePath: settingsData.basePath,
+            http_proxy: settingsData.http_proxy || '',
+            gopeed_api_host: settingsData.gopeed_api_host,
+            gopeed_api_token: settingsData.gopeed_api_token || ''
+          });
+        } else {
+          // Initial setup - set empty values
+          form.setFieldsValue({
+            civitai_api_token: '',
+            basePath: '',
+            http_proxy: '',
+            gopeed_api_host: '',
+            gopeed_api_token: ''
+          });
+        }
+        
+        setIsInitialSetup(isSetupRequired);
       } catch (err) {
         setError("An error has occurred: Can't communicate with server, maybe it's not even running yet.");
         console.error("Error loading settings:", err);
@@ -39,43 +65,67 @@ function SettingsPage() {
     };
 
     loadSettings();
-  }, []);
+  }, [form]);
 
-  // Use useActionState for form submission and state management
-  const [settings, formAction, isPending] = useActionState(
-    async (prevState: Settings | null, formData: FormData) => {
-      try {
-        // Convert FormData to Settings object with proper field mapping
-        const updatedSettings: Settings = {
-          civitai_api_token: formData.get('civitai_api_token') as string,
-          basePath: formData.get('basePath') as string,
-          http_proxy: formData.get('http_proxy') as string || undefined,
-          gopeed_api_host: formData.get('gopeed_api_host') as string,
-          gopeed_api_token: formData.get('gopeed_api_token') as string || undefined
-        };
+  // Handle form submission - centralized logic for better readability
+  const handleSubmit = async (values: any) => {
+    try {
+      setSubmitting(true);
+      
+      // Convert form values to Settings object
+      const updatedSettings: Settings = {
+        civitai_api_token: values.civitai_api_token,
+        basePath: values.basePath,
+        http_proxy: values.http_proxy || undefined,
+        gopeed_api_host: values.gopeed_api_host,
+        gopeed_api_token: values.gopeed_api_token || undefined
+      };
 
-        // Send update to server
-        const response = await edenTreaty.settings.api.settings.post(updatedSettings);
-        
-        if (response.error) {
-          console.error("Failed to save settings:", response.error);
-          return prevState;
-        }
-        
-        // After successful save, update the initial setup flag
-        setIsInitialSetup(false);
-        return response.data!;
-      } catch (error) {
-        console.error("Error saving settings:", error);
-        return prevState;
+      // Send update to server
+      const response = await edenTreaty.settings.api.settings.post(updatedSettings);
+      
+      if (response.error) {
+        console.error("Failed to save settings:", response.error);
+        notification.error({
+          message: "Save Failed",
+          description: "Failed to save settings. Please try again.",
+          duration: 3,
+        });
+        return;
       }
-    },
-    initialSettings
-  );
+      
+      // Success handling
+      notification.success({
+        message: "Settings Saved",
+        description: "Your settings have been successfully saved.",
+        duration: 3,
+      });
+      
+      // Update initial setup flag if this was the first setup
+      if (isInitialSetup) {
+        setIsInitialSetup(false);
+      }
+      
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      notification.error({
+        message: "Save Failed",
+        description: "An unexpected error occurred. Please try again.",
+        duration: 3,
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   // Handle form submission errors
-  const onFinishFailed = (errorInfo: any) => {
+  const handleSubmitFailed = (errorInfo: any) => {
     console.log("Form validation failed:", errorInfo);
+    notification.warning({
+      message: "Validation Error",
+      description: "Please check the form for errors.",
+      duration: 3,
+    });
   };
 
   // Show loading state
@@ -87,26 +137,11 @@ function SettingsPage() {
   if (error) {
     return <Alert 
       type="error" 
-      message="Error" 
+      title="Error" 
       description={error}
       showIcon
     />;
   }
-
-  // Determine form values (use empty values for initial setup)
-  const formValues = settings ? {
-    civitai_api_token: settings.civitai_api_token,
-    basePath: settings.basePath,
-    http_proxy: settings.http_proxy || '',
-    gopeed_api_host: settings.gopeed_api_host,
-    gopeed_api_token: settings.gopeed_api_token || ''
-  } : {
-    civitai_api_token: '',
-    basePath: '',
-    http_proxy: '',
-    gopeed_api_host: '',
-    gopeed_api_token: ''
-  };
 
   // Responsive form layout configuration
   const formItemLayout = {
@@ -152,7 +187,7 @@ function SettingsPage() {
           >
             <Alert
               type="info"
-              message="Initial Setup Required"
+              title="Initial Setup Required"
               description="This is your first time using the application. Please configure the required settings below to get started."
               showIcon
               style={{ marginBottom: 24 }}
@@ -170,10 +205,10 @@ function SettingsPage() {
           xl={16}      // Extra large: 16/24
         >
           <Form
+            form={form}
             name="settings"
-            initialValues={formValues}
-            action={formAction}
-            onFinishFailed={onFinishFailed}
+            onFinish={handleSubmit}
+            onFinishFailed={handleSubmitFailed}
             autoComplete="off"
             {...formItemLayout}
             layout="horizontal"
@@ -268,14 +303,14 @@ function SettingsPage() {
               <Button 
                 type="primary" 
                 htmlType="submit"
-                loading={isPending}
-                disabled={isPending}
+                loading={submitting}
+                disabled={submitting}
                 size="large"
                 style={{
                   marginTop: '16px'
                 }}
               >
-                {isInitialSetup ? "Complete Setup" : (isPending ? "Saving..." : "Save Settings")}
+                {isInitialSetup ? "Complete Setup" : (submitting ? "Saving..." : "Save Settings")}
               </Button>
             </Form.Item>
           </Form>
@@ -286,3 +321,5 @@ function SettingsPage() {
 }
 
 export default SettingsPage;
+
+
